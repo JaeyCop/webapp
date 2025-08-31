@@ -6,11 +6,27 @@
   "name": "webapp",
   "main": ".open-next/worker.js",
   "compatibility_date": "2025-04-01",
-  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "compatibility_flags": [
+    "nodejs_compat",
+    "global_fetch_strictly_public"
+  ],
   "assets": {
     "binding": "ASSETS",
     "directory": ".open-next/assets"
   },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "blog-cms",
+      "database_id": "fbce8f93-c142-47a0-94b5-3a8547c81eea"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA_BUCKET",
+      "bucket_name": "blog-cms-media"
+    }
+  ],
   "observability": {
     "enabled": true
   },
