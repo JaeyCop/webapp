@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -22,13 +22,11 @@ import {
     Undo,
     Redo
 } from 'lucide-react';
-import ImageUpload from '@/components/ImageUpload';
+import ImageUpload from '../../../components/ImageUpload';
 
 export default function NewArticle() {
     const [title, setTitle] = useState('');
     const [excerpt, setExcerpt] = useState('');
-    const [status, setStatus] = useState('draft');
-    const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [showImageUpload, setShowImageUpload] = useState(false);
     const router = useRouter();

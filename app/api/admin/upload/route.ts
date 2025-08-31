@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { R2Service, getR2BucketFromRequest } from '@/lib/r2';
-import { authenticateRequest } from '@/lib/auth';
-import { Database } from '@/lib/db';
+import { R2Service, getR2BucketFromRequest } from '../../../lib/r2';
+import { authenticateRequest } from '../../../lib/auth';
+import { Database } from '../../../lib/db';
 
 export async function POST(request: NextRequest) {
     try {
         // Authenticate the request
-        const db = new Database((request as any).env.DB);
+        const db = new Database((request as unknown as { env: { DB: unknown } }).env.DB);
         const user = await authenticateRequest(request, db);
         if (!user) {
             return NextResponse.json(
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
     try {
         // Authenticate the request
-        const db = new Database((request as any).env.DB);
+        const db = new Database((request as unknown as { env: { DB: unknown } }).env.DB);
         const user = await authenticateRequest(request, db);
         if (!user) {
             return NextResponse.json(

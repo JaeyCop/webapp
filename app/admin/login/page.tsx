@@ -45,7 +45,7 @@ export default function AdminLogin() {
                 }
                 setError(message);
             }
-        } catch (err) {
+        } catch {
             setError('An error occurred. Please try again.');
         } finally {
             setLoading(false);

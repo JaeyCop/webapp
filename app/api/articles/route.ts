@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Database } from '@/lib/db';
+import { Database } from '../../lib/db';
 
 export async function GET(request: NextRequest) {
     try {
-        const db = new Database((request as any).env.DB);
+        const db = new Database((request as unknown as { env: { DB: unknown } }).env.DB);
 
         // Get only published articles
         const articles = await db.getArticles('published', 20, 0);

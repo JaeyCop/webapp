@@ -8,11 +8,6 @@ import {
     Eye,
     Edit,
     Trash2,
-    Calendar,
-    User,
-    TrendingUp,
-    BarChart3,
-    Settings,
     LogOut,
     Image as ImageIcon
 } from 'lucide-react';

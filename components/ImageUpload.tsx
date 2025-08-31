@@ -85,7 +85,7 @@ export default function ImageUpload({ onUpload, onClose }: ImageUploadProps) {
             } else {
                 setError(result.message || 'Upload failed');
             }
-        } catch (error) {
+        } catch {
             setError('An error occurred during upload');
         } finally {
             setUploading(false);

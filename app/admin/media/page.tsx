@@ -11,7 +11,7 @@ import {
     Image as ImageIcon,
     Download
 } from 'lucide-react';
-import ImageUpload from '@/components/ImageUpload';
+import ImageUpload from '../../../components/ImageUpload';
 
 interface MediaItem {
     key: string;
@@ -48,7 +48,7 @@ export default function MediaLibrary() {
         }
     };
 
-    const handleImageUpload = (url: string) => {
+    const handleImageUpload = () => {
         // Refresh the media list after upload
         fetchMedia();
     };
@@ -168,6 +168,7 @@ export default function MediaLibrary() {
                                         alt={item.key}
                                         className="w-full h-full object-cover"
                                         loading="lazy"
+                                        style={{ imageRendering: 'auto' }}
                                     />
 
                                     {/* Overlay Actions */}

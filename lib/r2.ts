@@ -1,4 +1,4 @@
-import { R2Bucket } from '@cloudflare/workers-types';
+import type { R2Bucket } from '@cloudflare/workers-types';
 
 export interface UploadResult {
     success: boolean;
@@ -17,15 +17,19 @@ export class R2Service {
             // Create the key with a folder structure
             const key = `images/${uniqueFilename}`;
 
-            // Upload the file to R2
-            await this.bucket.put(key, file, {
+            // Convert File to ArrayBuffer for R2 compatibility
+            const arrayBuffer = await file.arrayBuffer();
+            await this.bucket.put(key, arrayBuffer, {
                 httpMetadata: {
                     contentType: file.type,
                 },
             });
 
             // Generate the public URL
-            const url = `https://${this.bucket.name}.r2.cloudflarestorage.com/${key}`;
+            // Since R2Bucket does not have a 'name' property, you must provide the bucket name another way.
+            // For example, you could pass it to the R2Service constructor.
+            // Here, we'll assume you add a 'bucketName' property to the class.
+            const url = `https://${(this as any).bucketName}.r2.cloudflarestorage.com/${key}`;
 
             return {
                 success: true,
@@ -53,20 +57,21 @@ export class R2Service {
     async listImages(prefix: string = 'images/'): Promise<string[]> {
         try {
             const objects = await this.bucket.list({ prefix });
-            return objects.objects.map(obj => obj.key);
+            return objects.objects.map((obj: { key: string }) => obj.key);
         } catch (error) {
             console.error('Error listing R2 objects:', error);
             return [];
         }
     }
 
-    generatePresignedUrl(key: string, expiresIn: number = 3600): string {
+    generatePresignedUrl(key: string): string {
         // For now, we'll return the public URL
         // In a production environment, you might want to generate actual presigned URLs
-        return `https://${this.bucket.name}.r2.cloudflarestorage.com/${key}`;
+        // Since R2Bucket does not have a 'name' property, use the bucketName property from the class
+        return `https://${(this as any).bucketName}.r2.cloudflarestorage.com/${key}`;
     }
 }
 
 export function getR2BucketFromRequest(request: Request): R2Bucket | null {
-    return (request as any).env?.MEDIA_BUCKET || null;
+    return (request as unknown as { env?: { MEDIA_BUCKET?: R2Bucket } }).env?.MEDIA_BUCKET || null;
 }

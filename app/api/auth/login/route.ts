@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Database } from '@/lib/db';
-import { Auth } from '@/lib/auth';
+import { Database } from '../../../lib/db';
+import { Auth } from '../../../lib/auth';
 
 export async function POST(request: NextRequest) {
     try {
-        const { email, password } = await request.json();
+        const body = await request.json();
+        const email = (body as { email?: string }).email;
+        const password = (body as { password?: string }).password;
 
         if (!email || !password) {
             return NextResponse.json(
@@ -14,7 +16,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Get the database from the environment
-        const db = new Database((request as any).env.DB);
+        const db = new Database((request as unknown as { env: { DB: unknown } }).env.DB);
         const auth = new Auth(db);
 
         const result = await auth.authenticateUser(email, password);

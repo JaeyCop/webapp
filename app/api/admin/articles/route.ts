@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Database } from '@/lib/db';
-import { authenticateRequest } from '@/lib/auth';
+import { Database } from '../../../lib/db';
+import { authenticateRequest } from '../../../lib/auth';
 
 export async function GET(request: NextRequest) {
     try {
-        const db = new Database((request as any).env.DB);
+        const db = new Database((request as unknown as { env: { DB: unknown } }).env.DB);
 
         // Authenticate the request
         const user = await authenticateRequest(request, db);
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
-        const db = new Database((request as any).env.DB);
+        const db = new Database((request as unknown as { env: { DB: unknown } }).env.DB);
 
         // Authenticate the request
         const user = await authenticateRequest(request, db);

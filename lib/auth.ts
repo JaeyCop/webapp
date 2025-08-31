@@ -29,10 +29,10 @@ export class Auth {
         );
     }
 
-    verifyToken(token: string): any {
+    verifyToken(token: string): unknown {
         try {
             return jwt.verify(token, JWT_SECRET);
-        } catch (error) {
+        } catch {
             return null;
         }
     }

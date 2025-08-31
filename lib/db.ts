@@ -54,7 +54,7 @@ export class Database {
       FROM articles a 
       LEFT JOIN users u ON a.author_id = u.id
     `;
-        const params: any[] = [];
+        const params: (string | number)[] = [];
 
         if (status) {
             query += ' WHERE a.status = ?';
@@ -110,7 +110,7 @@ export class Database {
     async updateArticle(id: string, updates: Partial<Article>): Promise<void> {
         const fields = Object.keys(updates).filter(key => key !== 'id' && key !== 'created_at');
         const setClause = fields.map(field => `${field} = ?`).join(', ');
-        const values = fields.map(field => (updates as any)[field]);
+        const values = fields.map(field => (updates as Record<string, unknown>)[field]);
 
         await this.db.prepare(`
       UPDATE articles 
