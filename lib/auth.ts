@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { Database, User } from './db';
+import { EnhancedDatabase as Database, User } from './db_enhanced';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const JWT_EXPIRES_IN = '7d';
@@ -65,7 +65,7 @@ export async function authenticateRequest(request: Request, db: Database): Promi
     if (!token) return null;
 
     const auth = new Auth(db);
-    const payload = auth.verifyToken(token);
+    const payload = auth.verifyToken(token) as any;
     if (!payload) return null;
 
     return await db.getUserById(payload.id);
