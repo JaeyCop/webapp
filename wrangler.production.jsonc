@@ -19,8 +19,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "blog-cms-production",
-      "database_id": "YOUR_PRODUCTION_DATABASE_ID"
+      "database_name": "blog-cms",
+      "database_id": "fbce8f93-c142-47a0-94b5-3a8547c81eea"
     }
   ],
   "r2_buckets": [
