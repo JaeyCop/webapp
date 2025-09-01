@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Database } from '@/lib/db';
+import { EnhancedDatabase as Database } from '@/lib/db_enhanced';
 import { Auth } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
@@ -15,8 +15,25 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Get the database from the environment
-        const db = new Database((request as unknown as { env: { DB: unknown } }).env.DB);
+        // Get the database from the environment - handle both Cloudflare Workers and development
+        let dbInstance;
+        if (process.env.DB) {
+            // Development environment - use process.env
+            dbInstance = process.env.DB as unknown;
+        } else {
+            // Cloudflare Workers environment
+            dbInstance = (request as unknown as { env: { DB: unknown } }).env?.DB;
+        }
+
+        if (!dbInstance) {
+            console.error('Database not available');
+            return NextResponse.json(
+                { message: 'Database connection error' },
+                { status: 500 }
+            );
+        }
+
+        const db = new Database(dbInstance);
         const auth = new Auth(db);
 
         const result = await auth.authenticateUser(email, password);
