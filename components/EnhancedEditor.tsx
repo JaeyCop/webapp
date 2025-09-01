@@ -107,7 +107,7 @@ export default function EnhancedEditor({
       const html = editor.getHTML();
       onChange(html);
       updateStats(html);
-      
+
       if (autoSave) {
         debouncedAutoSave(html);
       }

@@ -1,16 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { EnhancedDatabase as Database } from '@/lib/db_enhanced';
-import { Auth } from '@/lib/auth';
+import { Database } from '../../../../lib/db';
+import { Auth } from '../../../../lib/auth';
+import { authRateLimiter } from '../../../../lib/rate-limiter';
+import { Validator } from '../../../../lib/validation';
+import { logger } from '../../../../lib/logger';
+import { config } from '../../../../lib/config';
 
 export async function POST(request: NextRequest) {
     try {
-        const body = await request.json();
-        const email = (body as { email?: string }).email;
-        const password = (body as { password?: string }).password;
+        // Apply rate limiting
+        const rateLimitResult = await authRateLimiter.isAllowed(request);
+        if (!rateLimitResult.allowed) {
+            logger.warn('Rate limit exceeded for login attempt', {
+                ip: request.headers.get('CF-Connecting-IP') || 'unknown',
+                resetTime: rateLimitResult.resetTime
+            });
 
-        if (!email || !password) {
             return NextResponse.json(
-                { message: 'Email and password are required' },
+                {
+                    message: 'Too many login attempts. Please try again later.',
+                    resetTime: rateLimitResult.resetTime
+                },
+                {
+                    status: 429,
+                    headers: {
+                        'X-RateLimit-Limit': config.getRateLimit().auth.maxRequests.toString(),
+                        'X-RateLimit-Remaining': rateLimitResult.remaining?.toString() || '0',
+                        'X-RateLimit-Reset': rateLimitResult.resetTime?.toString() || '0'
+                    }
+                }
+            );
+        }
+
+        const body = await request.json();
+        const { email, password } = body;
+
+        // Validate input
+        const emailValidation = Validator.email(email);
+        const passwordValidation = password ? { isValid: true, errors: [], sanitized: password } : { isValid: false, errors: ['Password is required'] };
+
+        if (!emailValidation.isValid || !passwordValidation.isValid) {
+            const errors = [...emailValidation.errors, ...passwordValidation.errors];
+            logger.warn('Invalid login attempt', { email, errors });
+
+            return NextResponse.json(
+                { message: 'Invalid email or password format', errors },
                 { status: 400 }
             );
         }
@@ -21,7 +55,7 @@ export async function POST(request: NextRequest) {
             // For development, we'll create a mock implementation or skip DB operations
             // In a real development setup, you'd connect to a local SQLite or development D1
             console.log('Development mode: simulating authentication');
-            
+
             // Simple development authentication
             if (email === 'admin@example.com' && password === 'admin123') {
                 return NextResponse.json({
@@ -48,7 +82,7 @@ export async function POST(request: NextRequest) {
         }
 
         if (!dbInstance) {
-            console.error('Database not available');
+            logger.error('Database not available');
             return NextResponse.json(
                 { message: 'Database connection error' },
                 { status: 500 }
@@ -58,14 +92,18 @@ export async function POST(request: NextRequest) {
         const db = new Database(dbInstance);
         const auth = new Auth(db);
 
-        const result = await auth.authenticateUser(email, password);
+        const result = await auth.authenticateUser(emailValidation.sanitized, passwordValidation.sanitized);
 
         if (!result) {
+            logger.warn('Authentication failed', { email: emailValidation.sanitized });
             return NextResponse.json(
                 { message: 'Invalid email or password' },
                 { status: 401 }
             );
         }
+
+        // Successfully authenticated, clear rate limiter for this user/IP if needed, or just return success
+        // For simplicity here, we're just returning success. A more robust system might track successful logins.
 
         return NextResponse.json({
             token: result.token,
@@ -78,7 +116,7 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error) {
-        console.error('Login error:', error);
+        logger.error('Login endpoint error', { error });
         return NextResponse.json(
             { message: 'Internal server error' },
             { status: 500 }
