@@ -12,7 +12,7 @@ interface Article {
 
 async function getArticles(): Promise<Article[]> {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/articles`, {
+    const response = await fetch('/api/articles', {
       cache: 'no-store'
     });
     if (response.ok) {

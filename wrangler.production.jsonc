@@ -60,6 +60,7 @@
       "vars": {
         "NODE_ENV": "production",
         "NEXT_PUBLIC_APP_NAME": "Blog CMS",
+        "NEXT_PUBLIC_APP_URL": "https://blog-cms-production.zedmusiqzm.workers.dev",
         "ENABLE_ANALYTICS": "true"
       }
     }
