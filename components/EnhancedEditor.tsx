@@ -98,6 +98,7 @@ export default function EnhancedEditor({
       TableCell,
     ],
     content,
+    immediatelyRender: false,
     editorProps: {
       attributes: {
         class: 'prose prose-lg dark:prose-invert max-w-none focus:outline-none min-h-[400px] p-6',

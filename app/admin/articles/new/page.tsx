@@ -40,6 +40,7 @@ export default function NewArticle() {
             }),
         ],
         content: '<p>Start writing your article...</p>',
+        immediatelyRender: false,
         editorProps: {
             attributes: {
                 class: 'prose prose-lg max-w-none focus:outline-none min-h-[400px] p-4',
@@ -80,7 +81,7 @@ export default function NewArticle() {
                     title,
                     content: editor.getHTML(),
                     excerpt,
-                    status: publish ? 'published' : status
+                    status: publish ? 'published' : 'draft'
                 }),
             });
 
