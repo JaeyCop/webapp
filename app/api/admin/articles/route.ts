@@ -4,7 +4,77 @@ import { authenticateRequest } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
     try {
-        const db = new EnhancedDatabase((request as unknown as { env: { DB: unknown } }).env.DB);
+        // Handle development environment
+        if (process.env.NODE_ENV === 'development') {
+            // Mock data for development
+            const mockArticles = [
+                {
+                    id: 'dev-article-1',
+                    title: 'Development Article 1',
+                    slug: 'development-article-1',
+                    content: 'This is a mock article for development.',
+                    excerpt: 'Mock excerpt',
+                    status: 'published',
+                    author_id: 'dev-user-1',
+                    author_name: 'Development Admin',
+                    category_name: 'Development',
+                    view_count: 42,
+                    reading_time: 5,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                },
+                {
+                    id: 'dev-article-2',
+                    title: 'Development Article 2',
+                    slug: 'development-article-2',
+                    content: 'This is another mock article for development.',
+                    excerpt: 'Another mock excerpt',
+                    status: 'draft',
+                    author_id: 'dev-user-1',
+                    author_name: 'Development Admin',
+                    category_name: 'Development',
+                    view_count: 15,
+                    reading_time: 3,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                }
+            ];
+
+            const mockStats = {
+                total: 2,
+                published: 1,
+                drafts: 1,
+                scheduled: 0,
+                archived: 0
+            };
+
+            return NextResponse.json({
+                articles: mockArticles,
+                stats: mockStats,
+                pagination: {
+                    limit: 50,
+                    offset: 0,
+                    total: 2
+                }
+            });
+        }
+
+        // Production environment - use actual database
+        let dbInstance;
+        if (process.env.DB) {
+            dbInstance = process.env.DB as unknown;
+        } else {
+            dbInstance = (request as unknown as { env: { DB: unknown } }).env?.DB;
+        }
+
+        if (!dbInstance) {
+            return NextResponse.json(
+                { message: 'Database connection error' },
+                { status: 500 }
+            );
+        }
+
+        const db = new EnhancedDatabase(dbInstance);
 
         // Authenticate the request
         const user = await authenticateRequest(request, db);
@@ -57,7 +127,50 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
-        const db = new EnhancedDatabase((request as unknown as { env: { DB: unknown } }).env.DB);
+        // Handle development environment
+        if (process.env.NODE_ENV === 'development') {
+            const body = await request.json();
+            const { title, content } = body;
+
+            if (!title || !content) {
+                return NextResponse.json(
+                    { message: 'Title and content are required' },
+                    { status: 400 }
+                );
+            }
+
+            // Mock article creation for development
+            const mockArticle = {
+                id: 'dev-article-' + Date.now(),
+                title,
+                slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+                content,
+                excerpt: body.excerpt || '',
+                status: body.status || 'draft',
+                author_id: 'dev-user-1',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+
+            return NextResponse.json(mockArticle, { status: 201 });
+        }
+
+        // Production environment - use actual database
+        let dbInstance;
+        if (process.env.DB) {
+            dbInstance = process.env.DB as unknown;
+        } else {
+            dbInstance = (request as unknown as { env: { DB: unknown } }).env?.DB;
+        }
+
+        if (!dbInstance) {
+            return NextResponse.json(
+                { message: 'Database connection error' },
+                { status: 500 }
+            );
+        }
+
+        const db = new EnhancedDatabase(dbInstance);
 
         // Authenticate the request
         const user = await authenticateRequest(request, db);
