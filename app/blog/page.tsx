@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FileText, Calendar, User, ArrowLeft } from "lucide-react";
+import { EnhancedDatabase as Database } from '@/lib/db_enhanced';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -15,16 +16,16 @@ interface Article {
 
 async function getArticles(): Promise<Article[]> {
     try {
-        const response = await fetch('/api/articles', {
-            cache: 'no-store'
-        });
-        if (response.ok) {
-            return await response.json();
+        // Use direct database access instead of API call during SSR
+        if (typeof process !== 'undefined' && process.env.DB) {
+            const db = new Database(process.env.DB as unknown);
+            return await db.getArticles('published', 20, 0);
         }
+        return [];
     } catch (error) {
         console.error('Error fetching articles:', error);
+        return [];
     }
-    return [];
 }
 
 export default async function BlogPage() {
