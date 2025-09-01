@@ -17,7 +17,29 @@ export async function POST(request: NextRequest) {
 
         // Get the database from the environment - handle both Cloudflare Workers and development
         let dbInstance;
-        if (process.env.DB) {
+        if (process.env.NODE_ENV === 'development') {
+            // For development, we'll create a mock implementation or skip DB operations
+            // In a real development setup, you'd connect to a local SQLite or development D1
+            console.log('Development mode: simulating authentication');
+            
+            // Simple development authentication
+            if (email === 'admin@example.com' && password === 'admin123') {
+                return NextResponse.json({
+                    token: 'dev-token-' + Date.now(),
+                    user: {
+                        id: 'dev-user-1',
+                        email: 'admin@example.com',
+                        name: 'Development Admin',
+                        role: 'admin'
+                    }
+                });
+            } else {
+                return NextResponse.json(
+                    { message: 'Invalid email or password' },
+                    { status: 401 }
+                );
+            }
+        } else if (process.env.DB) {
             // Development environment - use process.env
             dbInstance = process.env.DB as unknown;
         } else {
