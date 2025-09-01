@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { EnhancedDatabase } from '../../../lib/db_enhanced';
-import { authenticateRequest } from '../../../lib/auth';
-import { generateSlug, generateColorFromString } from '../../../lib/utils';
+import { EnhancedDatabase } from '@/lib/db_enhanced';
+import { authenticateRequest } from '@/lib/auth';
+import { generateSlug, generateColorFromString } from '@/lib/utils';
 
 export async function GET(request: NextRequest) {
     try {

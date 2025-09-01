@@ -6,11 +6,11 @@ import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
-import Table from '@tiptap/extension-table';
+import { Table } from '@tiptap/extension-table';
 import TableRow from '@tiptap/extension-table-row';
 import TableHeader from '@tiptap/extension-table-header';
 import TableCell from '@tiptap/extension-table-cell';
-import { lowlight } from 'lowlight';
+import { createLowlight } from 'lowlight';
 import {
   Save,
   Eye,
@@ -40,6 +40,9 @@ import {
 } from 'lucide-react';
 import { debounce, calculateReadingTime } from '../lib/utils';
 import ImageUpload from './ImageUpload';
+
+// Create lowlight instance
+const lowlight = createLowlight();
 
 interface EnhancedEditorProps {
   content: string;

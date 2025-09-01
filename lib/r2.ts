@@ -7,7 +7,12 @@ export interface UploadResult {
 }
 
 export class R2Service {
-    constructor(private bucket: R2Bucket) { }
+    private bucketName: string;
+
+    constructor(private bucket: R2Bucket, bucketName?: string) {
+        // Use environment variable or fallback to provided name
+        this.bucketName = bucketName || process.env.R2_BUCKET_NAME || 'blog-cms-media';
+    }
 
     async uploadImage(file: File, filename?: string): Promise<UploadResult> {
         try {
@@ -25,11 +30,9 @@ export class R2Service {
                 },
             });
 
-            // Generate the public URL
-            // Since R2Bucket does not have a 'name' property, you must provide the bucket name another way.
-            // For example, you could pass it to the R2Service constructor.
-            // Here, we'll assume you add a 'bucketName' property to the class.
-            const url = `https://${(this as any).bucketName}.r2.cloudflarestorage.com/${key}`;
+            // Generate the public URL using environment variable or default
+            const publicUrl = process.env.R2_PUBLIC_URL || `https://${this.bucketName}.r2.dev`;
+            const url = `${publicUrl}/${key}`;
 
             return {
                 success: true,
@@ -65,10 +68,9 @@ export class R2Service {
     }
 
     generatePresignedUrl(key: string): string {
-        // For now, we'll return the public URL
-        // In a production environment, you might want to generate actual presigned URLs
-        // Since R2Bucket does not have a 'name' property, use the bucketName property from the class
-        return `https://${(this as any).bucketName}.r2.cloudflarestorage.com/${key}`;
+        // Generate the public URL using environment variable or default
+        const publicUrl = process.env.R2_PUBLIC_URL || `https://${this.bucketName}.r2.dev`;
+        return `${publicUrl}/${key}`;
     }
 }
 

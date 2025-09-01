@@ -1,22 +1,20 @@
-# Next.js Framework Starter
+# Blog CMS
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/next-starter-template)
+A modern, production-ready blog content management system built with Next.js 15 and deployed on Cloudflare Workers. Features a rich text editor, media management, and a clean admin interface.
 
-<!-- dash-content-start -->
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/)
 
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app). It's deployed on Cloudflare Workers as a [static website](https://developers.cloudflare.com/workers/static-assets/).
+## Features
 
-This template uses [OpenNext](https://opennext.js.org/) via the [OpenNext Cloudflare adapter](https://opennext.js.org/cloudflare), which works by taking the Next.js build output and transforming it, so that it can run in Cloudflare Workers.
-
-<!-- dash-content-end -->
-
-Outside of this repo, you can start a new project with this template using [C3](https://developers.cloudflare.com/pages/get-started/c3/) (the `create-cloudflare` CLI):
-
-```bash
-npm create cloudflare@latest -- --template=cloudflare/templates/next-starter-template
-```
-
-A live public deployment of this template is available at [https://next-starter-template.templates.workers.dev](https://next-starter-template.templates.workers.dev)
+- 🚀 **Modern Stack**: Next.js 15, React 19, TypeScript
+- ☁️ **Cloudflare Platform**: Workers, D1 Database, R2 Storage
+- ✍️ **Rich Editor**: TipTap editor with image uploads
+- 📱 **Responsive Design**: Works on desktop and mobile
+- 🔐 **Secure Authentication**: JWT-based admin authentication
+- 📊 **Media Management**: Upload and organize images
+- 🏷️ **Content Organization**: Tags and categories
+- 🌐 **SEO Friendly**: Optimized URLs and meta tags
+- 🔧 **Production Ready**: Multiple environments, monitoring, backups
 
 ## Getting Started
 

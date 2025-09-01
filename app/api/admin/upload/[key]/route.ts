@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { R2Service, getR2BucketFromRequest } from '../../../../lib/r2';
-import { authenticateRequest } from '../../../../lib/auth';
-import { Database } from '../../../../lib/db';
+import { R2Service, getR2BucketFromRequest } from '@/lib/r2';
+import { authenticateRequest } from '@/lib/auth';
+import { Database } from '@/lib/db';
 
 export async function DELETE(
     request: NextRequest,

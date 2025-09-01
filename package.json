@@ -55,10 +55,17 @@
     "build": "next build",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv env.d.ts",
     "check": "npm run build && tsc",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "dev": "next dev",
     "lint": "next lint",
+    "start": "next start",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "start": "next start"
+    "deploy:dev": "opennextjs-cloudflare build && opennextjs-cloudflare deploy --config wrangler.jsonc",
+    "deploy:staging": "opennextjs-cloudflare build && opennextjs-cloudflare deploy --config wrangler.staging.jsonc",
+    "deploy:production": "opennextjs-cloudflare build && opennextjs-cloudflare deploy --config wrangler.production.jsonc",
+    "db:migrate:dev": "wrangler d1 execute blog-cms-dev --file=./schema_enhanced.sql",
+    "db:migrate:staging": "wrangler d1 execute blog-cms-staging --file=./schema_enhanced.sql",
+    "db:migrate:production": "wrangler d1 execute blog-cms-production --file=./schema_enhanced.sql",
+    "secrets:set:staging": "echo 'Run: wrangler secret put JWT_SECRET --env staging && wrangler secret put ADMIN_EMAIL --env staging && wrangler secret put ADMIN_PASSWORD --env staging'",
+    "secrets:set:production": "echo 'Run: wrangler secret put JWT_SECRET --env production && wrangler secret put ADMIN_EMAIL --env production && wrangler secret put ADMIN_PASSWORD --env production'"
   }
 }

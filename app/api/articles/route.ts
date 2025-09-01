@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { EnhancedDatabase as Database } from '../../lib/db_enhanced';
+import { EnhancedDatabase as Database } from '@/lib/db_enhanced';
 
 export async function GET(request: NextRequest) {
     try {

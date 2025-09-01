@@ -1,11 +1,11 @@
 /**
- * Development Wrangler Configuration
+ * Staging Wrangler Configuration
  * For more details on how to configure Wrangler, refer to:
  * https://developers.cloudflare.com/workers/wrangler/configuration/
  */
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "blog-cms-dev",
+  "name": "blog-cms-staging",
   "main": ".open-next/worker.js",
   "compatibility_date": "2025-04-01",
   "compatibility_flags": [
@@ -19,23 +19,32 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "blog-cms-dev",
-      "database_id": "fbce8f93-c142-47a0-94b5-3a8547c81eea"
+      "database_name": "blog-cms-staging",
+      "database_id": "YOUR_STAGING_DATABASE_ID"
     }
   ],
   "r2_buckets": [
     {
       "binding": "MEDIA_BUCKET",
-      "bucket_name": "blog-cms-media-dev"
+      "bucket_name": "blog-cms-media-staging"
     }
   ],
   "vars": {
-    "NODE_ENV": "development",
-    "NEXT_PUBLIC_APP_NAME": "Blog CMS (Dev)",
-    "ENABLE_ANALYTICS": "false"
+    "NODE_ENV": "staging",
+    "NEXT_PUBLIC_APP_NAME": "Blog CMS (Staging)",
+    "ENABLE_ANALYTICS": "true"
   },
+  "secrets": [
+    "JWT_SECRET",
+    "ADMIN_EMAIL",
+    "ADMIN_PASSWORD"
+  ],
   "observability": {
     "enabled": true
   },
-  "upload_source_maps": true
+  "upload_source_maps": true,
+  "logpush": false,
+  "placement": {
+    "mode": "smart"
+  }
 }

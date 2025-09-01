@@ -22,7 +22,7 @@ import {
     Undo,
     Redo
 } from 'lucide-react';
-import ImageUpload from '../../../components/ImageUpload';
+import ImageUpload from '@/components/ImageUpload';
 
 export default function NewArticle() {
     const [title, setTitle] = useState('');
