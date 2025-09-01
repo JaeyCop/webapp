@@ -15,7 +15,8 @@ interface Article {
 
 async function getArticles(): Promise<Article[]> {
   try {
-    const response = await fetch('/api/articles', {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const response = await fetch(`${baseUrl}/api/articles`, {
       cache: 'no-store'
     });
     if (response.ok) {
