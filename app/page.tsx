@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { FileText, Calendar, User, ArrowRight } from "lucide-react";
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 interface Article {
   id: string;
   title: string;
