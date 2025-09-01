@@ -1,0 +1,18 @@
+Tiptap Error: SSR has been detected, please set `immediatelyRender` explicitly to `false` to avoid hydration mismatches.getInitialEditor@webpack-internal:///(app-pages-browser)/./node_modules/@tiptap/react/dist/index.js:427:17
+_EditorInstanceManager@webpack-internal:///(app-pages-browser)/./node_modules/@tiptap/react/dist/index.js:408:25
+@webpack-internal:///(app-pages-browser)/./node_modules/@tiptap/react/dist/index.js:632:83
+mountStateImpl@webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:7271:24
+mountState@webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:7292:22
+useState@webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:23291:18
+exports.useState@webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react/cjs/react.development.js:1231:34
+useEditor@webpack-internal:///(app-pages-browser)/./node_modules/@tiptap/react/dist/index.js:632:76
+NewArticle@webpack-internal:///(app-pages-browser)/./app/admin/articles/new/page.tsx:45:76
+react-stack-bottom-frame@webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:22974:20
+renderWithHooks@webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:6667:40
+updateFunctionComponent@webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:8931:19
+beginWork@webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:10556:18
+runWithFiberInDEV@webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:848:13
+performUnitOfWork@webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:15258:22
+workLoopSync@webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:15078:58
+renderRootSync@webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:15058:11
+performWorkOnRoot@webpack-internal:///(app-pages-browser)/./node_modules/next/dist/com
