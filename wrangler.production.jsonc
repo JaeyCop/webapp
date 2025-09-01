@@ -34,17 +34,34 @@
     "NEXT_PUBLIC_APP_NAME": "Blog CMS",
     "ENABLE_ANALYTICS": "true"
   },
-  "secrets": [
-    "JWT_SECRET",
-    "ADMIN_EMAIL",
-    "ADMIN_PASSWORD"
-  ],
   "observability": {
     "enabled": true
   },
   "upload_source_maps": true,
-  "logpush": true,
   "placement": {
     "mode": "smart"
+  },
+  "env": {
+    "production": {
+      "name": "blog-cms-production",
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "blog-cms",
+          "database_id": "fbce8f93-c142-47a0-94b5-3a8547c81eea"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "MEDIA_BUCKET",
+          "bucket_name": "blog-cms-media-production"
+        }
+      ],
+      "vars": {
+        "NODE_ENV": "production",
+        "NEXT_PUBLIC_APP_NAME": "Blog CMS",
+        "ENABLE_ANALYTICS": "true"
+      }
+    }
   }
 }
