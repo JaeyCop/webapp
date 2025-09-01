@@ -545,4 +545,48 @@ export class EnhancedDatabase {
         `).bind(articleId).all<ArticleRevision>();
         return result.results || [];
     }
+
+    // Article-Tag relationship operations
+    async addTagsToArticle(articleId: string, tagIds: string[]): Promise<void> {
+        for (const tagId of tagIds) {
+            await this.db.prepare(`
+                INSERT OR IGNORE INTO article_tags (article_id, tag_id) VALUES (?, ?)
+            `).bind(articleId, tagId).run();
+            
+            await this.incrementTagUsage(tagId);
+        }
+    }
+
+    async removeTagsFromArticle(articleId: string, tagIds: string[]): Promise<void> {
+        for (const tagId of tagIds) {
+            await this.db.prepare(`
+                DELETE FROM article_tags WHERE article_id = ? AND tag_id = ?
+            `).bind(articleId, tagId).run();
+        }
+    }
+
+    async getArticleTags(articleId: string): Promise<Tag[]> {
+        const result = await this.db.prepare(`
+            SELECT t.* FROM tags t
+            JOIN article_tags at ON t.id = at.tag_id
+            WHERE at.article_id = ?
+            ORDER BY t.name
+        `).bind(articleId).all<Tag>();
+        return result.results || [];
+    }
+
+    async getArticlesByTag(tagSlug: string, limit = 10, offset = 0): Promise<Article[]> {
+        const result = await this.db.prepare(`
+            SELECT a.*, u.name as author_name, c.name as category_name
+            FROM articles a
+            JOIN article_tags at ON a.id = at.article_id
+            JOIN tags t ON at.tag_id = t.id
+            LEFT JOIN users u ON a.author_id = u.id
+            LEFT JOIN categories c ON a.category_id = c.id
+            WHERE t.slug = ? AND a.status = 'published'
+            ORDER BY a.published_at DESC
+            LIMIT ? OFFSET ?
+        `).bind(tagSlug, limit, offset).all<Article>();
+        return result.results || [];
+    }
 }

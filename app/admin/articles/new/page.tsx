@@ -34,7 +34,11 @@ export default function NewArticle() {
     const editor = useEditor({
         extensions: [
             StarterKit,
-            Image,
+            Image.configure({
+                HTMLAttributes: {
+                    class: 'rounded-lg max-w-full h-auto',
+                },
+            }),
             Link.configure({
                 openOnClick: false,
             }),

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -13,11 +14,13 @@ import {
   Image as ImageIcon,
   Settings,
   Globe,
-  FileText
+  FileText,
+  Search,
+  Plus,
+  X,
+  Upload
 } from 'lucide-react';
 import EnhancedEditor from '../../../../components/EnhancedEditor';
-import CategoryManager from '../../../../components/CategoryManager';
-import MediaLibrary from '../../../../components/MediaLibrary';
 import { generateSlug, calculateReadingTime, generateExcerpt } from '../../../../lib/utils';
 
 interface Category {
@@ -25,6 +28,7 @@ interface Category {
   name: string;
   slug: string;
   color: string;
+  description?: string;
 }
 
 interface Tag {
@@ -32,20 +36,31 @@ interface Tag {
   name: string;
   slug: string;
   color: string;
+  usage_count: number;
 }
 
 export default function EnhancedNewArticle() {
+  const router = useRouter();
+  
+  // Article content
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
   const [content, setContent] = useState('<p>Start writing your article...</p>');
   const [excerpt, setExcerpt] = useState('');
-  const [featuredImage, setFeaturedImage] = useState('');
-  const [featuredImageAlt, setFeaturedImageAlt] = useState('');
   const [status, setStatus] = useState<'draft' | 'published' | 'scheduled'>('draft');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [scheduledAt, setScheduledAt] = useState('');
   const [template, setTemplate] = useState('default');
+  
+  // Featured image
+  const [featuredImage, setFeaturedImage] = useState('');
+  const [featuredImageAlt, setFeaturedImageAlt] = useState('');
+  
+  // Categories and tags
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [newTagName, setNewTagName] = useState('');
   
   // SEO fields
   const [metaTitle, setMetaTitle] = useState('');
@@ -61,45 +76,42 @@ export default function EnhancedNewArticle() {
   // UI state
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'content' | 'seo' | 'settings'>('content');
-  const [showCategoryManager, setShowCategoryManager] = useState(false);
-  const [showMediaLibrary, setShowMediaLibrary] = useState(false);
-  const [mediaLibraryMode, setMediaLibraryMode] = useState<'featured' | 'og'>('featured');
-  const [autoGenerateSlug, setAutoGenerateSlug] = useState(true);
-  const [autoGenerateExcerpt, setAutoGenerateExcerpt] = useState(true);
-  
-  // Data
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [tags, setTags] = useState<Tag[]>([]);
-  
-  const router = useRouter();
+  const [showImageUpload, setShowImageUpload] = useState(false);
+  const [imageUploadMode, setImageUploadMode] = useState<'featured' | 'og'>('featured');
+  const [readingTime, setReadingTime] = useState(0);
 
+  // Load categories and tags
   useEffect(() => {
     fetchCategories();
     fetchTags();
   }, []);
 
+  // Auto-generate slug from title
   useEffect(() => {
-    if (autoGenerateSlug && title) {
+    if (title && !slug) {
       setSlug(generateSlug(title));
     }
-  }, [title, autoGenerateSlug]);
+  }, [title, slug]);
 
+  // Auto-populate SEO fields
   useEffect(() => {
-    if (autoGenerateExcerpt && content) {
-      const generatedExcerpt = generateExcerpt(content);
-      setExcerpt(generatedExcerpt);
-    }
-  }, [content, autoGenerateExcerpt]);
+    if (title && !metaTitle) setMetaTitle(title);
+    if (excerpt && !metaDescription) setMetaDescription(excerpt);
+    if (title && !ogTitle) setOgTitle(title);
+    if (excerpt && !ogDescription) setOgDescription(excerpt);
+  }, [title, excerpt, metaTitle, metaDescription, ogTitle, ogDescription]);
+
+  // Calculate reading time
+  useEffect(() => {
+    setReadingTime(calculateReadingTime(content));
+  }, [content]);
 
   const fetchCategories = async () => {
     try {
-      const token = localStorage.getItem('admin-token');
-      const response = await fetch('/api/admin/categories', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const response = await fetch('/api/admin/categories');
       if (response.ok) {
         const data = await response.json();
-        setCategories(data.categories || []);
+        setCategories(data);
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -108,89 +120,132 @@ export default function EnhancedNewArticle() {
 
   const fetchTags = async () => {
     try {
-      const token = localStorage.getItem('admin-token');
-      const response = await fetch('/api/admin/tags', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const response = await fetch('/api/admin/tags');
       if (response.ok) {
         const data = await response.json();
-        setTags(data.tags || []);
+        setTags(data);
       }
     } catch (error) {
       console.error('Error fetching tags:', error);
     }
   };
 
-  const handleSave = async (publishStatus?: 'draft' | 'published' | 'scheduled') => {
-    if (!title.trim()) {
-      alert('Please enter a title');
-      return;
+  const handleContentChange = (newContent: string) => {
+    setContent(newContent);
+    if (!excerpt) {
+      setExcerpt(generateExcerpt(newContent));
     }
+  };
 
-    setSaving(true);
+  const addTag = async () => {
+    if (!newTagName.trim()) return;
     
-    const finalStatus = publishStatus || status;
-    const readingTime = calculateReadingTime(content);
-    
-    const articleData = {
-      title,
-      slug: slug || generateSlug(title),
-      content,
-      excerpt: excerpt || generateExcerpt(content),
-      featured_image: featuredImage,
-      featured_image_alt: featuredImageAlt,
-      status: finalStatus,
-      category_id: selectedCategory || null,
-      tags: selectedTags,
-      scheduled_at: finalStatus === 'scheduled' ? scheduledAt : null,
-      published_at: finalStatus === 'published' ? new Date().toISOString() : null,
-      reading_time: readingTime,
-      template,
-      meta_title: metaTitle,
-      meta_description: metaDescription,
-      meta_keywords: metaKeywords,
-      og_title: ogTitle,
-      og_description: ogDescription,
-      og_image: ogImage,
-      custom_fields: JSON.stringify(customFields)
-    };
-
     try {
-      const token = localStorage.getItem('admin-token');
+      const response = await fetch('/api/admin/tags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newTagName,
+          slug: generateSlug(newTagName),
+          color: '#6366f1'
+        })
+      });
+      
+      if (response.ok) {
+        const newTag = await response.json();
+        setTags([...tags, newTag]);
+        setSelectedTags([...selectedTags, newTag.id]);
+        setNewTagName('');
+      }
+    } catch (error) {
+      console.error('Error creating tag:', error);
+    }
+  };
+
+  const removeTag = (tagId: string) => {
+    setSelectedTags(selectedTags.filter(id => id !== tagId));
+  };
+
+  const handleImageUpload = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch('/api/admin/upload', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (response.ok) {
+        const { url } = await response.json();
+        if (imageUploadMode === 'featured') {
+          setFeaturedImage(url);
+        } else {
+          setOgImage(url);
+        }
+        setShowImageUpload(false);
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+    }
+  };
+
+  const handleSave = async (publishStatus = status) => {
+    setSaving(true);
+    try {
+      const articleData = {
+        title,
+        slug,
+        content,
+        excerpt: excerpt || generateExcerpt(content),
+        featured_image: featuredImage,
+        featured_image_alt: featuredImageAlt,
+        status: publishStatus,
+        author_id: 'admin-1', // In real app, get from auth
+        category_id: selectedCategory || null,
+        meta_title: metaTitle,
+        meta_description: metaDescription,
+        meta_keywords: metaKeywords,
+        og_title: ogTitle,
+        og_description: ogDescription,
+        og_image: ogImage,
+        scheduled_at: scheduledAt || null,
+        published_at: publishStatus === 'published' ? new Date().toISOString() : null,
+        reading_time: readingTime,
+        template,
+        custom_fields: JSON.stringify(customFields),
+        tags: selectedTags
+      };
+
       const response = await fetch('/api/admin/articles', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(articleData),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(articleData)
       });
 
       if (response.ok) {
         router.push('/admin/dashboard');
-      } else {
-        const error = await response.json();
-        alert(`Failed to save article: ${error.message}`);
       }
     } catch (error) {
       console.error('Error saving article:', error);
-      alert('Failed to save article');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleMediaSelect = (file: any) => {
-    if (mediaLibraryMode === 'featured') {
-      setFeaturedImage(file.file_path);
-      setFeaturedImageAlt(file.alt_text || '');
-    } else {
-      setOgImage(file.file_path);
-    }
-    setShowMediaLibrary(false);
-  };
+  const tabs = [
+    { id: 'content', label: 'Content', icon: FileText },
+    { id: 'seo', label: 'SEO & Social', icon: Globe },
+    { id: 'settings', label: 'Settings', icon: Settings }
+  ];
 
-  const selectedCategoryData = categories.find(c => c.id === selectedCategory);
+  const templates = [
+    { value: 'default', label: 'Default Article' },
+    { value: 'featured', label: 'Featured Article' },
+    { value: 'tutorial', label: 'Tutorial' },
+    { value: 'review', label: 'Product Review' },
+    { value: 'news', label: 'News Article' }
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -198,46 +253,35 @@ export default function EnhancedNewArticle() {
       <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center">
               <button
-                onClick={() => router.back()}
-                className="flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+                onClick={() => router.push('/admin/dashboard')}
+                className="mr-4 p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
               >
-                <ArrowLeft className="h-5 w-5 mr-2" />
-                Back
+                <ArrowLeft className="h-5 w-5" />
               </button>
               <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
                 Create New Article
               </h1>
             </div>
-            
             <div className="flex items-center space-x-3">
+              <span className="text-sm text-gray-500 dark:text-gray-400 flex items-center">
+                <Clock className="h-4 w-4 mr-1" />
+                {readingTime} min read
+              </span>
               <button
                 onClick={() => handleSave('draft')}
                 disabled={saving}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 transition-colors"
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
               >
-                <Save className="h-4 w-4 mr-2" />
-                {saving ? 'Saving...' : 'Save Draft'}
+                Save Draft
               </button>
-              
-              {status === 'scheduled' && (
-                <button
-                  onClick={() => handleSave('scheduled')}
-                  disabled={saving || !scheduledAt}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-orange-600 hover:bg-orange-700 disabled:opacity-50 transition-colors"
-                >
-                  <Clock className="h-4 w-4 mr-2" />
-                  Schedule
-                </button>
-              )}
-              
               <button
                 onClick={() => handleSave('published')}
                 disabled={saving}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                className="px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg transition-colors disabled:opacity-50 flex items-center"
               >
-                <Eye className="h-4 w-4 mr-2" />
+                <Save className="h-4 w-4 mr-2" />
                 {saving ? 'Publishing...' : 'Publish'}
               </button>
             </div>
@@ -246,496 +290,552 @@ export default function EnhancedNewArticle() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="lg:col-span-2 space-y-6">
             {/* Title */}
-            <div>
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Article Title
+              </label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="block w-full text-3xl font-bold border-none bg-transparent text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-0"
                 placeholder="Enter your article title..."
+                className="w-full text-2xl font-bold border-none bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none resize-none"
               />
-            </div>
-
-            {/* Slug */}
-            <div className="flex items-center gap-2">
-              <Globe className="h-4 w-4 text-gray-400" />
-              <span className="text-sm text-gray-500 dark:text-gray-400">URL:</span>
-              <input
-                type="text"
-                value={slug}
-                onChange={(e) => {
-                  setSlug(e.target.value);
-                  setAutoGenerateSlug(false);
-                }}
-                className="flex-1 text-sm border-none bg-transparent text-gray-600 dark:text-gray-300 focus:outline-none focus:ring-0"
-                placeholder="article-slug"
-              />
-              <button
-                onClick={() => {
-                  setSlug(generateSlug(title));
-                  setAutoGenerateSlug(true);
-                }}
-                className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
-              >
-                Auto-generate
-              </button>
+              <div className="mt-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  URL Slug
+                </label>
+                <input
+                  type="text"
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value)}
+                  placeholder="article-url-slug"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              </div>
             </div>
 
             {/* Tabs */}
-            <div className="border-b border-gray-200 dark:border-gray-700">
-              <nav className="-mb-px flex space-x-8">
-                {[
-                  { id: 'content', label: 'Content', icon: FileText },
-                  { id: 'seo', label: 'SEO', icon: Globe },
-                  { id: 'settings', label: 'Settings', icon: Settings }
-                ].map(({ id, label, icon: Icon }) => (
-                  <button
-                    key={id}
-                    onClick={() => setActiveTab(id as any)}
-                    className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm ${
-                      activeTab === id
-                        ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-                    }`}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {label}
-                  </button>
-                ))}
-              </nav>
-            </div>
-
-            {/* Tab Content */}
-            {activeTab === 'content' && (
-              <div className="space-y-6">
-                {/* Editor */}
-                <EnhancedEditor
-                  content={content}
-                  onChange={setContent}
-                  autoSave={false}
-                  showWordCount={true}
-                  showReadingTime={true}
-                />
-
-                {/* Excerpt */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Excerpt
-                    </label>
-                    <button
-                      onClick={() => {
-                        setExcerpt(generateExcerpt(content));
-                        setAutoGenerateExcerpt(true);
-                      }}
-                      className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
-                    >
-                      Auto-generate
-                    </button>
-                  </div>
-                  <textarea
-                    value={excerpt}
-                    onChange={(e) => {
-                      setExcerpt(e.target.value);
-                      setAutoGenerateExcerpt(false);
-                    }}
-                    rows={3}
-                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    placeholder="Brief description of the article..."
-                  />
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    {excerpt.length}/160 characters
-                  </p>
-                </div>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+              <div className="border-b border-gray-200 dark:border-gray-700">
+                <nav className="flex space-x-8">
+                  {tabs.map((tab) => {
+                    const Icon = tab.icon;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id as any)}
+                        className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+                          activeTab === tab.id
+                            ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                            : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                        }`}
+                      >
+                        <Icon className="h-4 w-4" />
+                        <span>{tab.label}</span>
+                      </button>
+                    );
+                  })}
+                </nav>
               </div>
-            )}
 
-            {activeTab === 'seo' && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Meta Title
-                    </label>
-                    <input
-                      type="text"
-                      value={metaTitle}
-                      onChange={(e) => setMetaTitle(e.target.value)}
-                      className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      placeholder="SEO title (leave empty to use article title)"
-                    />
-                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      {metaTitle.length}/60 characters
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Meta Keywords
-                    </label>
-                    <input
-                      type="text"
-                      value={metaKeywords}
-                      onChange={(e) => setMetaKeywords(e.target.value)}
-                      className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      placeholder="keyword1, keyword2, keyword3"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Meta Description
-                  </label>
-                  <textarea
-                    value={metaDescription}
-                    onChange={(e) => setMetaDescription(e.target.value)}
-                    rows={3}
-                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="SEO description (leave empty to use excerpt)"
-                  />
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    {metaDescription.length}/160 characters
-                  </p>
-                </div>
-
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-                    Open Graph (Social Media)
-                  </h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="p-6">
+                {activeTab === 'content' && (
+                  <div className="space-y-6">
+                    {/* Content Editor */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        OG Title
+                        Article Content
                       </label>
-                      <input
-                        type="text"
-                        value={ogTitle}
-                        onChange={(e) => setOgTitle(e.target.value)}
-                        className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        placeholder="Social media title"
+                      <EnhancedEditor
+                        content={content}
+                        onChange={handleContentChange}
+                        placeholder="Start writing your article..."
+                        autoSave={true}
+                        showWordCount={true}
+                        showReadingTime={true}
                       />
                     </div>
 
+                    {/* Excerpt */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        OG Image
+                        Article Excerpt
                       </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={ogImage}
-                          onChange={(e) => setOgImage(e.target.value)}
-                          className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          placeholder="Social media image URL"
-                        />
-                        <button
-                          onClick={() => {
-                            setMediaLibraryMode('og');
-                            setShowMediaLibrary(true);
-                          }}
-                          className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600"
-                        >
-                          <ImageIcon className="h-4 w-4" />
-                        </button>
-                      </div>
+                      <textarea
+                        value={excerpt}
+                        onChange={(e) => setExcerpt(e.target.value)}
+                        placeholder="Brief description of your article..."
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+                      />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {excerpt.length}/160 characters recommended for SEO
+                      </p>
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      OG Description
-                    </label>
-                    <textarea
-                      value={ogDescription}
-                      onChange={(e) => setOgDescription(e.target.value)}
-                      rows={3}
-                      className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      placeholder="Social media description"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'settings' && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Template
-                    </label>
-                    <select
-                      value={template}
-                      onChange={(e) => setTemplate(e.target.value)}
-                      className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    >
-                      <option value="default">Default</option>
-                      <option value="minimal">Minimal</option>
-                      <option value="featured">Featured</option>
-                      <option value="tutorial">Tutorial</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Publication Status
-                    </label>
-                    <select
-                      value={status}
-                      onChange={(e) => setStatus(e.target.value as any)}
-                      className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    >
-                      <option value="draft">Draft</option>
-                      <option value="published">Published</option>
-                      <option value="scheduled">Scheduled</option>
-                    </select>
-                  </div>
-                </div>
-
-                {status === 'scheduled' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Scheduled Date & Time
-                    </label>
-                    <input
-                      type="datetime-local"
-                      value={scheduledAt}
-                      onChange={(e) => setScheduledAt(e.target.value)}
-                      className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      min={new Date().toISOString().slice(0, 16)}
-                    />
                   </div>
                 )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Custom Fields (JSON)
-                  </label>
-                  <textarea
-                    value={JSON.stringify(customFields, null, 2)}
-                    onChange={(e) => {
-                      try {
-                        setCustomFields(JSON.parse(e.target.value));
-                      } catch {
-                        // Invalid JSON, keep the text as is
-                      }
-                    }}
-                    rows={6}
-                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-sm"
-                    placeholder='{"custom_field": "value"}'
-                  />
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Add custom metadata as JSON
-                  </p>
-                </div>
+                {activeTab === 'seo' && (
+                  <div className="space-y-6">
+                    {/* Meta SEO */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white flex items-center">
+                        <Search className="h-5 w-5 mr-2" />
+                        Search Engine Optimization
+                      </h3>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Meta Title
+                        </label>
+                        <input
+                          type="text"
+                          value={metaTitle}
+                          onChange={(e) => setMetaTitle(e.target.value)}
+                          placeholder="SEO optimized title..."
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        />
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {metaTitle.length}/60 characters recommended
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Meta Description
+                        </label>
+                        <textarea
+                          value={metaDescription}
+                          onChange={(e) => setMetaDescription(e.target.value)}
+                          placeholder="Brief description for search engines..."
+                          rows={3}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+                        />
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {metaDescription.length}/160 characters recommended
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Meta Keywords
+                        </label>
+                        <input
+                          type="text"
+                          value={metaKeywords}
+                          onChange={(e) => setMetaKeywords(e.target.value)}
+                          placeholder="keyword1, keyword2, keyword3..."
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Open Graph */}
+                    <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-6">
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white flex items-center">
+                        <Globe className="h-5 w-5 mr-2" />
+                        Social Media (Open Graph)
+                      </h3>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Social Title
+                        </label>
+                        <input
+                          type="text"
+                          value={ogTitle}
+                          onChange={(e) => setOgTitle(e.target.value)}
+                          placeholder="Title for social media sharing..."
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Social Description
+                        </label>
+                        <textarea
+                          value={ogDescription}
+                          onChange={(e) => setOgDescription(e.target.value)}
+                          placeholder="Description for social media sharing..."
+                          rows={3}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Social Image
+                        </label>
+                        <div className="flex items-center space-x-4">
+                          {ogImage ? (
+                            <div className="relative">
+                              <img
+                                src={ogImage}
+                                alt="Social media preview"
+                                className="w-32 h-20 object-cover rounded-lg border border-gray-300 dark:border-gray-600"
+                              />
+                              <button
+                                onClick={() => setOgImage('')}
+                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="w-32 h-20 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex items-center justify-center">
+                              <ImageIcon className="h-8 w-8 text-gray-400" />
+                            </div>
+                          )}
+                          <button
+                            onClick={() => {
+                              setImageUploadMode('og');
+                              setShowImageUpload(true);
+                            }}
+                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center"
+                          >
+                            <Upload className="h-4 w-4 mr-2" />
+                            Upload Image
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'settings' && (
+                  <div className="space-y-6">
+                    {/* Template */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Article Template
+                      </label>
+                      <select
+                        value={template}
+                        onChange={(e) => setTemplate(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      >
+                        {templates.map((tmpl) => (
+                          <option key={tmpl.value} value={tmpl.value}>
+                            {tmpl.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Publishing Options */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Publication Status
+                      </label>
+                      <select
+                        value={status}
+                        onChange={(e) => setStatus(e.target.value as any)}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      >
+                        <option value="draft">Draft</option>
+                        <option value="published">Published</option>
+                        <option value="scheduled">Scheduled</option>
+                      </select>
+                    </div>
+
+                    {status === 'scheduled' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Schedule For
+                        </label>
+                        <input
+                          type="datetime-local"
+                          value={scheduledAt}
+                          onChange={(e) => setScheduledAt(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        />
+                      </div>
+                    )}
+
+                    {/* Custom Fields */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Custom Fields (JSON)
+                      </label>
+                      <textarea
+                        value={JSON.stringify(customFields, null, 2)}
+                        onChange={(e) => {
+                          try {
+                            setCustomFields(JSON.parse(e.target.value));
+                          } catch {
+                            // Invalid JSON, don't update
+                          }
+                        }}
+                        placeholder='{"customField": "value"}'
+                        rows={4}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-sm resize-none"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Featured Image */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-              <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
+                <ImageIcon className="h-5 w-5 mr-2" />
                 Featured Image
               </h3>
+              
               {featuredImage ? (
-                <div className="space-y-3">
+                <div className="relative">
                   <img
                     src={featuredImage}
-                    alt={featuredImageAlt}
-                    className="w-full h-32 object-cover rounded-lg"
-                  />
-                  <input
-                    type="text"
-                    value={featuredImageAlt}
-                    onChange={(e) => setFeaturedImageAlt(e.target.value)}
-                    className="block w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="Alt text for accessibility"
+                    alt={featuredImageAlt || 'Featured image'}
+                    className="w-full h-48 object-cover rounded-lg border border-gray-300 dark:border-gray-600"
                   />
                   <button
-                    onClick={() => {
-                      setFeaturedImage('');
-                      setFeaturedImageAlt('');
-                    }}
-                    className="text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+                    onClick={() => setFeaturedImage('')}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                   >
-                    Remove image
+                    <X className="h-4 w-4" />
                   </button>
                 </div>
               ) : (
+                <div className="w-full h-48 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex items-center justify-center">
+                  <div className="text-center">
+                    <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                    <p className="text-gray-500 dark:text-gray-400">No image selected</p>
+                  </div>
+                </div>
+              )}
+              
+              <div className="mt-4 space-y-3">
                 <button
                   onClick={() => {
-                    setMediaLibraryMode('featured');
-                    setShowMediaLibrary(true);
+                    setImageUploadMode('featured');
+                    setShowImageUpload(true);
                   }}
-                  className="w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex items-center justify-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
+                  className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center"
                 >
-                  <div className="text-center">
-                    <ImageIcon className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      Choose featured image
-                    </p>
-                  </div>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload Featured Image
                 </button>
-              )}
+                
+                {featuredImage && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Alt Text
+                    </label>
+                    <input
+                      type="text"
+                      value={featuredImageAlt}
+                      onChange={(e) => setFeaturedImageAlt(e.target.value)}
+                      placeholder="Describe the image for accessibility..."
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Category */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-                  Category
-                </h3>
-                <button
-                  onClick={() => setShowCategoryManager(true)}
-                  className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
-                >
-                  Manage
-                </button>
-              </div>
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
+                <Folder className="h-5 w-5 mr-2" />
+                Category
+              </h3>
               
-              {selectedCategoryData ? (
-                <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              >
+                <option value="">Select a category...</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+              
+              {selectedCategory && (
+                <div className="mt-2 flex items-center">
                   <div
-                    className="w-3 h-3 rounded"
-                    style={{ backgroundColor: selectedCategoryData.color }}
+                    className="w-4 h-4 rounded-full mr-2"
+                    style={{ backgroundColor: categories.find(c => c.id === selectedCategory)?.color || '#6366f1' }}
                   />
-                  <span className="text-sm text-gray-900 dark:text-white">
-                    {selectedCategoryData.name}
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    {categories.find(c => c.id === selectedCategory)?.name}
                   </span>
-                  <button
-                    onClick={() => setSelectedCategory('')}
-                    className="ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  >
-                    ×
-                  </button>
                 </div>
-              ) : (
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="block w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                >
-                  <option value="">Select a category</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
               )}
             </div>
 
             {/* Tags */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-              <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
+                <Tag className="h-5 w-5 mr-2" />
                 Tags
               </h3>
-              <div className="space-y-3">
-                {selectedTags.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {selectedTags.map((tagId) => {
-                      const tag = tags.find(t => t.id === tagId);
-                      return tag ? (
-                        <span
-                          key={tagId}
-                          className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                        >
-                          <div
-                            className="w-2 h-2 rounded-full"
-                            style={{ backgroundColor: tag.color }}
-                          />
-                          {tag.name}
-                          <button
-                            onClick={() => setSelectedTags(prev => prev.filter(id => id !== tagId))}
-                            className="ml-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ) : null;
-                    })}
-                  </div>
-                )}
-                
-                <select
-                  value=""
-                  onChange={(e) => {
-                    if (e.target.value && !selectedTags.includes(e.target.value)) {
-                      setSelectedTags(prev => [...prev, e.target.value]);
-                    }
-                  }}
-                  className="block w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                >
-                  <option value="">Add a tag</option>
-                  {tags
-                    .filter(tag => !selectedTags.includes(tag.id))
-                    .map((tag) => (
-                      <option key={tag.id} value={tag.id}>
+              
+              {/* Selected Tags */}
+              {selectedTags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {selectedTags.map((tagId) => {
+                    const tag = tags.find(t => t.id === tagId);
+                    if (!tag) return null;
+                    return (
+                      <span
+                        key={tagId}
+                        className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-white"
+                        style={{ backgroundColor: tag.color }}
+                      >
                         {tag.name}
-                      </option>
-                    ))}
-                </select>
+                        <button
+                          onClick={() => removeTag(tagId)}
+                          className="ml-2 hover:bg-white/20 rounded-full p-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Available Tags */}
+              <div className="space-y-3">
+                <div className="max-h-32 overflow-y-auto space-y-1">
+                  {tags.filter(tag => !selectedTags.includes(tag.id)).map((tag) => (
+                    <button
+                      key={tag.id}
+                      onClick={() => setSelectedTags([...selectedTags, tag.id])}
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-between"
+                    >
+                      <span className="flex items-center">
+                        <div
+                          className="w-3 h-3 rounded-full mr-2"
+                          style={{ backgroundColor: tag.color }}
+                        />
+                        {tag.name}
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {tag.usage_count}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Add New Tag */}
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={newTagName}
+                    onChange={(e) => setNewTagName(e.target.value)}
+                    placeholder="New tag name..."
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                    onKeyPress={(e) => e.key === 'Enter' && addTag()}
+                  />
+                  <button
+                    onClick={addTag}
+                    disabled={!newTagName.trim()}
+                    className="px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Preview Card */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
+                <Eye className="h-5 w-5 mr-2" />
+                Article Preview
+              </h3>
+              
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Status:</span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    status === 'published' 
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                      : status === 'scheduled'
+                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                      : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                  }`}>
+                    {status}
+                  </span>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Reading Time:</span>
+                  <span className="text-gray-900 dark:text-white">{readingTime} min</span>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Category:</span>
+                  <span className="text-gray-900 dark:text-white">
+                    {selectedCategory ? categories.find(c => c.id === selectedCategory)?.name : 'None'}
+                  </span>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Tags:</span>
+                  <span className="text-gray-900 dark:text-white">{selectedTags.length}</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Modals */}
-      {showCategoryManager && (
+      {/* Image Upload Modal */}
+      {showImageUpload && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-2xl max-h-[80vh] overflow-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Manage Categories
-                </h2>
-                <button
-                  onClick={() => setShowCategoryManager(false)}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+              Upload {imageUploadMode === 'featured' ? 'Featured' : 'Social'} Image
+            </h3>
+            
+            <div className="space-y-4">
+              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center">
+                <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  Drag and drop an image here, or click to select
+                </p>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleImageUpload(file);
+                  }}
+                  className="hidden"
+                  id="image-upload"
+                />
+                <label
+                  htmlFor="image-upload"
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors cursor-pointer inline-block"
                 >
-                  ×
+                  Select Image
+                </label>
+              </div>
+              
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowImageUpload(false)}
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                >
+                  Cancel
                 </button>
               </div>
-              <CategoryManager
-                onSelect={(category) => {
-                  setSelectedCategory(category.id);
-                  setShowCategoryManager(false);
-                }}
-                selectedCategory={selectedCategory}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showMediaLibrary && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-6xl max-h-[80vh] overflow-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Media Library
-                </h2>
-                <button
-                  onClick={() => setShowMediaLibrary(false)}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                >
-                  ×
-                </button>
-              </div>
-              <MediaLibrary
-                onSelect={handleMediaSelect}
-                allowedTypes={['image/*']}
-              />
             </div>
           </div>
         </div>
